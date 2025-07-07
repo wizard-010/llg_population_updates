@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Local Level Government Population Updates</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet">
+    <style>
+        .dashboard-card {
+            transition: all 0.3s ease;
+        }
+
+        .dashboard-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        .population-badge {
+            font-size: 1rem;
+        }
+
+        .progress-thin {
+            height: 6px;
+        }
+
+        .gender-ratio {
+            width: 100px;
+            display: inline-block;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container-fluid">
+        <header class="bg-primary text-white p-4 mb-4 rounded-bottom">
+            <div class="d-flex justify-content-between align-items-center">
+                <h1 class="mb-0">Local Level Government Population Updates</h1>
+                <a href="admin.html" class="btn btn-light">Admin Login</a>
+            </div>
+            <div class="row mt-3">
+                <div class="col-md-6 offset-md-3">
+                    <select id="llgSelector" class="form-select select2">
+                        <option value="">Select LLG</option>
+                        <option value="001" selected>Sample LLG</option>
+                    </select>
+                </div>
+            </div>
+        </header>
+
+        <div class="row mb-4" id="llgDashboard">
+            <div class="col-md-12">
+                <h2 id="llgTitle" class="text-center mb-4">Loading LLG Data...</h2>
+
+                <div class="card mb-4 dashboard-card">
+                    <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
+                        <h3 class="mb-0">LLG Summary</h3>
+                        <span class="badge bg-light text-dark population-badge">Last updated: <span
+                                id="lastUpdated">Loading...</span></span>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-3">
+                                <div class="card text-center h-100 dashboard-card">
+                                    <div class="card-header bg-success text-white">Total Population</div>
+                                    <div class="card-body">
+                                        <h2 id="totalPopulation">0</h2>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="card text-center h-100 dashboard-card">
+                                    <div class="card-header bg-primary text-white">Voting Age Population</div>
+                                    <div class="card-body">
+                                        <h2 id="votingPopulation">0</h2>
+                                        <div class="small">
+                                            <span class="text-primary" id="maleVoters">Male: 0</span> |
+                                            <span class="text-danger" id="femaleVoters">Female: 0</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="card text-center h-100 dashboard-card">
+                                    <div class="card-header bg-warning text-dark">Births This Year</div>
+                                    <div class="card-body">
+                                        <h2 id="birthsCount">0</h2>
+                                        <div class="small" id="birthsChange">Loading...</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="card text-center h-100 dashboard-card">
+                                    <div class="card-header bg-secondary text-white">Deaths This Year</div>
+                                    <div class="card-body">
+                                        <h2 id="deathsCount">0</h2>
+                                        <div class="small" id="deathsChange">Loading...</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Ward Breakdown Table -->
+                <div class="row">
+                    <div class="col-md-12">
+                        <div class="card h-100 dashboard-card">
+                            <div class="card-header bg-dark text-white">
+                                <h3>Ward Breakdown</h3>
+                            </div>
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table class="table table-striped" id="wardsTable">
+                                        <thead>
+                                            <tr>
+                                                <th>Ward</th>
+                                                <th>Total Population</th>
+                                                <th>Voting Age (18+)</th>
+                                                <th class="text-success">Births (YTD)</th>
+                                                <th class="text-secondary">Deaths (YTD)</th>
+                                                <th>Net Change</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="wardsTableBody">
+                                            <!-- Data will be inserted here by JavaScript -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row mt-4">
+                    <div class="col-md-6">
+                        <div class="card h-100 dashboard-card">
+                            <div class="card-header bg-dark text-white">
+                                <h3>Population Pyramid</h3>
+                            </div>
+                            <div class="card-body">
+                                <canvas id="populationPyramid"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card h-100 dashboard-card">
+                            <div class="card-header bg-dark text-white">
+                                <h3>Population Growth</h3>
+                            </div>
+                            <div class="card-body">
+                                <canvas id="populationGrowth"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+    <script>
+        // Replace with your Google Apps Script Web App URL
+        const SCRIPT_URL = 'https://script.google.com/macros/s/YOUR_SCRIPT_ID/exec';
+
+        // Global chart variables
+        let populationPyramidChart;
+        let populationGrowthChart;
+
+        // Initialize Select2 and load data
+        $(document).ready(function () {
+            $('.select2').select2();
+            loadLLGData('001'); // Load data for default LLG
+        });
+
+        // Load LLG data from Google Sheets
+        async function loadLLGData(llgId) {
+            try {
+                const response = await fetch(`${SCRIPT_URL}?action=getLLGData&llgId=${llgId}`);
+                const data = await response.json();
+
+                updateDashboard(data);
+                renderCharts(data);
+            } catch (error) {
+                console.error('Error loading data:', error);
+                // Fallback to sample data if API fails
+                loadSampleData();
+            }
+        }
+
+        // Update the dashboard with live data
+        function updateDashboard(data) {
+            // Update LLG header
+            document.getElementById('llgTitle').textContent = data.llg.name;
+            document.getElementById('lastUpdated').textContent =
+                new Date(data.llg.lastUpdated).toLocaleString();
+
+            // Calculate totals from wards
+            const totals = calculateTotals(data.wards);
+
+            // Update summary cards
+            document.getElementById('totalPopulation').textContent =
+                totals.population.toLocaleString();
+            document.getElementById('votingPopulation').textContent =
+                totals.votingAge.toLocaleString();
+            document.getElementById('maleVoters').textContent =
+                `Male: ${totals.male18Plus.toLocaleString()}`;
+            document.getElementById('femaleVoters').textContent =
+                `Female: ${totals.female18Plus.toLocaleString()}`;
+            document.getElementById('birthsCount').textContent =
+                totals.birthsYTD.toLocaleString();
+            document.getElementById('deathsCount').textContent =
+                totals.deathsYTD.toLocaleString();
+
+            // Update wards table
+            updateWardsTable(data.wards);
+        }
+
+        // Calculate totals from ward data
+        function calculateTotals(wards) {
+            return wards.reduce((totals, ward) => {
+                totals.population += ward.population;
+                totals.votingAge += ward.votingAge;
+                totals.male18Plus += ward.male18Plus;
+                totals.female18Plus += ward.female18Plus;
+                totals.birthsYTD += ward.birthsYTD;
+                totals.deathsYTD += ward.deathsYTD;
+                return totals;
+            }, {
+                population: 0,
+                votingAge: 0,
+                male18Plus: 0,
+                female18Plus: 0,
+                birthsYTD: 0,
+                deathsYTD: 0
+            });
+        }
+
+        // Update the wards table
+        function updateWardsTable(wards) {
+            const tableBody = document.getElementById('wardsTableBody');
+            tableBody.innerHTML = '';
+
+            wards.forEach(ward => {
+                const votingPercent = ((ward.votingAge / ward.population) * 100).toFixed(1);
+                const malePercent = ((ward.male18Plus / ward.votingAge) * 100).toFixed(1);
+                const netChange = ward.birthsYTD - ward.deathsYTD;
+
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${ward.wardName}</td>
+                    <td>${ward.population.toLocaleString()}</td>
+                    <td>
+                        <div>${ward.votingAge.toLocaleString()} (${votingPercent}%)</div>
+                        <div class="progress progress-thin mt-1">
+                            <div class="progress-bar bg-primary" style="width: ${malePercent}%"></div>
+                            <div class="progress-bar bg-danger" style="width: ${100 - malePercent}%"></div>
+                        </div>
+                    </td>
+                    <td class="text-success">${ward.birthsYTD.toLocaleString()}</td>
+                    <td class="text-secondary">${ward.deathsYTD.toLocaleString()}</td>
+                    <td class="${netChange >= 0 ? 'text-success' : 'text-danger'}">
+                        ${netChange >= 0 ? '+' : ''}${netChange}
+                    </td>
+                `;
+                tableBody.appendChild(row);
+            });
+        }
+
+        // Render charts with live data
+        function renderCharts(data) {
+            // Destroy existing charts if they exist
+            if (populationPyramidChart) populationPyramidChart.destroy();
+            if (populationGrowthChart) populationGrowthChart.destroy();
+
+            // Population Pyramid Chart
+            const pyramidCtx = document.getElementById('populationPyramid').getContext('2d');
+            populationPyramidChart = new Chart(pyramidCtx, {
+                type: 'bar',
+                data: {
+                    labels: ['0-17', '18-30', '31-45', '46-60', '61+'],
+                    datasets: [
+                        {
+                            label: 'Male',
+                            data: [3200, 2800, 2100, 1500, 800], // Replace with real data
+                            backgroundColor: 'rgba(54, 162, 235, 0.7)',
+                            borderColor: 'rgba(54, 162, 235, 1)',
+                            borderWidth: 1
+                        },
+                        {
+                            label: 'Female',
+                            data: [3100, 2750, 2150, 1600, 950], // Replace with real data
+                            backgroundColor: 'rgba(255, 99, 132, 0.7)',
+                            borderColor: 'rgba(255, 99, 132, 1)',
+                            borderWidth: 1
+                        }
+                    ]
+                },
+                options: {
+                    indexAxis: 'y',
+                    responsive: true,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'Population by Age and Gender'
+                        }
+                    },
+                    scales: {
+                        x: {
+                            stacked: true,
+                            title: {
+                                display: true,
+                                text: 'Population'
+                            }
+                        },
+                        y: {
+                            stacked: true,
+                            title: {
+                                display: true,
+                                text: 'Age Group'
+                            }
+                        }
+                    }
+                }
+            });
+
+            // Population Growth Chart
+            const growthCtx = document.getElementById('populationGrowth').getContext('2d');
+            populationGrowthChart = new Chart(growthCtx, {
+                type: 'line',
+                data: {
+                    labels: ['2018', '2019', '2020', '2021', '2022', '2023'],
+                    datasets: [{
+                        label: 'Total Population',
+                        data: [22000, 22500, 23000, 23500, 24200, 24750], // Replace with real data
+                        borderColor: 'rgba(75, 192, 192, 1)',
+                        backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                        tension: 0.3,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'Population Growth Over Time'
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: false,
+                            title: {
+                                display: true,
+                                text: 'Population'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Fallback to sample data if API fails
+        function loadSampleData() {
+            console.warn("Using sample data - API connection failed");
+            const sampleData = {
+                llg: {
+                    name: "Sample LLG (Offline)",
+                    lastUpdated: new Date().toISOString()
+                },
+                wards: [
+                    {
+                        wardName: "Central Ward",
+                        population: 8450,
+                        votingAge: 5120,
+                        male18Plus: 2662,
+                        female18Plus: 2458,
+                        birthsYTD: 68,
+                        deathsYTD: 32
+                    },
+                    {
+                        wardName: "North Ward",
+                        population: 7210,
+                        votingAge: 4210,
+                        male18Plus: 2147,
+                        female18Plus: 2063,
+                        birthsYTD: 52,
+                        deathsYTD: 28
+                    }
+                ]
+            };
+            updateDashboard(sampleData);
+            renderCharts(sampleData);
+        }
+    </script>
+</body>
+
+</html>
